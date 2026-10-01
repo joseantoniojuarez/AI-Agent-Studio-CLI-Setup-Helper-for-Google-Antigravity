@@ -240,8 +240,6 @@ Report each as passed, blocked, declined, or pending verification. Never summari
 
 The user must later complete Google sign-in if needed and run **Fusion AI Studio: Configure Authentication** in VS Code using administrator-provided details. Do not request those details in chat. Local readiness is not proof of Fusion access or remote functionality.
 
-For VM feedback, request only OS/architecture, shell/version, failing stage, resolved tool path, sanitized error and exit code, and whether this was a first or repeat run. Never request credentials, full environment dumps, or `env.properties`. On repeat runs, rediscover the current state, skip verified matching components, and repair only the observed problem.
-
 ## Official sources
 
 Checked when this skill was authored on October 1, 2026; verify current details at execution time when necessary.
