@@ -83,27 +83,6 @@ The final report separates local tooling, agent integration, and authentication.
 
 Google sign-in is user-controlled. Fusion authentication is deferred: later run **Fusion AI Studio: Configure Authentication** in VS Code using details supplied by your administrator. Do not share credentials or `env.properties` in the agent chat. Setup does not fetch, save, or publish remote Fusion artifacts.
 
-## Validation and Windows 11 VM feedback
-
-This is an initial version for iterative validation. Checks completed during authoring include skill frontmatter validation, the downloaded Oracle CLI's help commands, and blank-project initialization in a temporary macOS folder containing spaces. The macOS launcher template passed checks for paths containing spaces and apostrophes, argument boundaries (including empty and Unicode arguments), working-directory preservation, shell syntax, and exit-status propagation.
-
-A complete installation has not yet been verified on either platform. Windows launcher execution, persistent PATH propagation, installers, extension activation, and skill discovery still require host testing. Windows 11 VM execution feedback will be used to refine the procedure; individual command checks do not prove a full installation works.
-
-Useful validation runs are:
-
-| Scenario | Expected result |
-| --- | --- |
-| First setup with Desktop and missing prerequisites | Only missing components installed; required paths and integrations verified |
-| Existing Node/npm and VS Code | Compatible installations preserved |
-| Node available, npm blocked through a PowerShell shim | `npm.cmd` checked before proposing policy or installation changes |
-| Folder or Windows account name contains spaces | Repository, launcher, CLI arguments, and scaffold paths work |
-| No Git | Official ZIP workflow succeeds with a recorded commit |
-| Existing workspace or `aistudio` command | Conflicts identified without overwriting files |
-| Second execution | Matching tools/files reused; PATH entries and launchers not duplicated |
-| Restarted applications and fresh terminals | Persistent commands resolve outside the workspace |
-| Corporate policy or download failure | Specific blocker reported; unrelated checks still completed |
-
-For feedback, share the OS/architecture, shell/version, failing stage, resolved executable path, sanitized error, exit code, and whether it was the first or a repeat run. Include relevant user-visible messages when they clarify the problem. Remove credentials and account/environment details that are not needed; never share `env.properties` or a full environment dump.
 
 ## Official sources
 
