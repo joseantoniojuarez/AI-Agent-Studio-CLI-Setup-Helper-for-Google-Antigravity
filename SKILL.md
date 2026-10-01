@@ -109,7 +109,7 @@ Verify the installed executable directly, then `agy --version` and `agy --help` 
 
 Use only `https://github.com/oracle/fusion-ai-studio`. Inspect remote metadata before assuming a branch or file layout. Prefer the branch corresponding to a Fusion release already stated by the user. If unknown, use the repository's default release branch as a provisional local setup snapshot and clearly state that compatibility with the user's Fusion environment remains unverified. Ask for a product release only when needed to resolve a known mismatch. Do not select the highest-looking branch name without Oracle documentation.
 
-Use this layout under the selected writable setup root; adapt names safely when paths exist:
+Use this layout under the selected writable setup root; adapt names safely when paths exist and verify that the final structure matches this outline, creating the `fusion-ai-workspace` folder and its content.
 
 ```text
 oracle-ai-agent-studio/
@@ -131,7 +131,7 @@ Inspect the selected repository's README and `how-to/` installation documentatio
 
 ## 4. Prepare the workspace and Oracle extension
 
-Create a new development workspace unless an existing one is explicitly selected. Before copying, compare relative file inventories; on repeat runs compare hashes for matching destinations. Copy the complete Oracle `.agents/skills` tree and `aiapps` tree, including hidden items and all referenced resources. Reuse identical files; stop only conflicting copies and continue independent checks. Do not invoke or rewrite Oracle authoring skills as part of setup.
+Create a new development workspace. Before copying, compare relative file inventories; on repeat runs compare hashes for matching destinations. Copy the complete Oracle `.agents/skills` tree and `aiapps` tree, including hidden items and all referenced resources. Reuse identical files; stop only conflicting copies and continue independent checks. Do not invoke or rewrite Oracle authoring skills as part of setup.
 
 - **macOS:** for an absent/empty destination, `ditto "$source" "$destination"` copies contents, including hidden files. Do not run it against an unchecked nonempty destination.
 - **Windows:** enumerate contents with `Get-ChildItem -LiteralPath $source -Force` and copy each entry with `Copy-Item -LiteralPath $entry.FullName -Destination $destination -Recurse`. This includes dot-items and avoids wildcard treatment of unusual names. Do not use `-Force` to bypass a conflict decision.
