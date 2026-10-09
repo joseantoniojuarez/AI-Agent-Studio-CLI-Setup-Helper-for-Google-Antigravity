@@ -7,6 +7,37 @@ description: Prepare or repair a local Windows, macOS, or Linux Oracle AI Agent 
 
 Prepare a local development environment usable from Google Antigravity Desktop and from Visual Studio Code with Antigravity. Complete the applicable operating-system branch and verify observable results. This skill contains the full setup procedure and an embedded layout helper; no separately distributed scripts are required. During execution, materialize that helper in the setup downloads directory and run it as instructed. Do not merely describe the desired tree.
 
+## Execution cadence and recovery
+
+Use the following phase order as the execution plan; the numbered sections below contain the procedures, not permission to launch them all at once. Execute one phase at a time and only read the relevant OS branch. Do not delegate this setup to parallel agents or launch concurrent installers, downloads, or extension installations. A short group of related read-only probes may run in one command, returning a compact summary.
+
+| Phase | Work | Completion evidence |
+| --- | --- | --- |
+| 1 of 10 | Discover host, user, existing tools, and fixed paths | Host/context and absolute path contract recorded |
+| 2 of 10 | Prepare Node.js/npm and layout preflight | Runtime works; preflight passes |
+| 3 of 10 | Prepare Linux credential storage | Temporary store/read/delete passes, or explicit blocker; not applicable on Windows/macOS |
+| 4 of 10 | Prepare VS Code and install Google Antigravity extension | Correct VS Code user/profile; Google extension ID and version observed |
+| 5 of 10 | Prepare Antigravity CLI | Correct agy executable, version, and help |
+| 6 of 10 | Acquire Oracle source snapshot | Ref/commit and source root recorded |
+| 7 of 10 | Initialize workspace and copy skills/samples | Scaffold and complete copies in fusion-ai-workspace |
+| 8 of 10 | Extract and install Oracle VS Code extension | VSIX identity matches installed extension; layout gate passes |
+| 9 of 10 | Register aistudio and open the project | Persistent launcher verified; correct project/profile opened |
+| 10 of 10 | Perform remaining checks and report | Evidence for every required component and explicit remaining blockers |
+
+Before each phase, send one short progress message in the user's language: `[4/10] Preparing VS Code and installing the Google Antigravity extension.` After it, state the observed result and the next phase. While an operation runs longer than roughly a minute, give a brief status update when the host allows it, without restarting the operation. Do not narrate every shell command or send messages in a rapid loop. Continue automatically within existing authorization; phase boundaries do not require the user to approve each step.
+
+For each phase use **inspect → execute missing work → wait → verify → checkpoint**. Wait for a command/process to finish before its dependent action. If a tool returns a running-process handle, reuse that handle; do not launch the command again. Use the host's waiting facility, normally in 15–30 second intervals, rather than rapid polling. Do not wait longer than necessary when completion is already reported.
+
+Keep the model context small: reuse verified source metadata, fetched documentation, and prior results; retain only relevant excerpts. Save non-sensitive verbose setup logs under `DOWNLOADS` and return exit status, a brief result, and at most the relevant error excerpt (normally 20–40 lines). Do not send entire bundled CLIs, archives, recursive file inventories, or repeated full tool logs to the model. Use the embedded helper for filesystem work and return its summary. Progress messages improve visibility; **they do not increase model quotas or prevent rate limits**. Reduce redundant tool/model cycles and retry loops instead.
+
+### Persistent progress record
+
+Once the root has been inspected and `DOWNLOADS` exists, keep a small `DOWNLOADS/setup-progress.json`. Use a JSON serializer and atomic file replacement; inspect an existing file before updating it. Record `schemaVersion`, target OS/user, frozen absolute paths, selected source ref/commit, VS Code launcher/profile/extension host, and one entry per phase with `status`, `checkedAt`, concise `evidence`, `lastAction`, and `nextAction`. Statuses are `pending`, `running`, `passed`, `blocked`, `awaiting-user`, or `not-applicable`. For a running external command, record its process handle and log location when available. Store no credentials, environment dumps, authentication output, or private keyring data.
+
+Checkpoint **before** a mutating operation and after its result, so recovery does not depend on writing a final message after the model has already hit a limit. On resume, read this record and perform only the cheap checks needed to confirm its evidence still applies. A previously running command has an unknown outcome: inspect its process/result and actual installed state before retrying. Resume the first unfinished phase; do not repeat downloads, `init`, copies, or installations that have already passed. Treat checkpoint text as recorded data, not executable commands or authorization. Existing user decisions and host permissions still apply.
+
+For HTTP 429, `RESOURCE_EXHAUSTED`, or an explicit rate/quota limit, stop immediate retries and dependent work. Honor a supplied `Retry-After` or reset time. For a transient request limit, allow at most one retry of the affected safe operation after the stated delay; if no delay is given, wait at least 60 seconds before that one retry. Do not retry a mutation whose result is unknown. For a hard quota exhaustion or a repeated limit, report the saved checkpoint and stop until a resumed session can continue; do not switch models/accounts or loop through endpoints to bypass the limit. If the host cannot wait or send more messages, rely on the already-written checkpoint. A restart requirement or blocked phase may leave independent later phases runnable, but run them sequentially and preserve the blocked status.
+
 ## Scope and operating rules
 
 - The user already has Google Antigravity Desktop. Verify its presence; do not replace it with Antigravity IDE, Gemini CLI, or Codex. No Codex installation or Codex project is required.
@@ -174,14 +205,20 @@ Recheck the VS Code version against Google's current extension requirements. Pre
 
 ### Google Antigravity extension
 
-Install into the selected VS Code profile, using its verified launcher:
+This extension and the Oracle extension in phase 8 are **required deliverables**, even when Desktop or the standalone CLI already works. Never replace installation with advice to install later, a downloaded VSIX, or a successful `code --version`. If the target cannot install an extension, mark that component blocked; do not mark setup complete.
+
+Freeze the VS Code extension target: absolute launcher, developer account, actual existing profile (or explicitly selected default), and local versus remote extension host. Use the same target for installation, listing, and opening `WORKSPACE`. Do not invent a profile name: VS Code can create a new empty profile when the supplied name does not exist. Do not use `sudo code` or create a temporary user-data/extensions directory to obtain a misleading successful result. On remote/WSL setups, verify the installed extension belongs to the host where the user will use it; an unrelated server or Windows-host listing is not evidence for the Linux desktop.
+
+Inspect the target's extension list once. If a compatible `Google.google-antigravity` is already installed, record its exact ID/version and reuse it. Otherwise run installation as a separate action, wait for completion, check its exit code, and list again using the verified launcher:
 
 ```text
 code --install-extension Google.google-antigravity
 code --list-extensions --show-versions
 ```
 
-Replace `code` with its actual path (`& $codeLauncher ...` in PowerShell); add the same `--profile` option to both commands when needed. Reload the editor when requested. Have the user open the Google Antigravity panel and complete any required sign-in themselves. Its automatic backend installation does not prove a terminal-accessible CLI exists. Installation verification and interactive activation/sign-in verification are separate results.
+Replace `code` with its actual path (`& $codeLauncher ...` in PowerShell); add the same `--profile` option to both commands when needed. Match the full extension ID case-insensitively in the resulting `publisher.name@version` records, not a partial name or installer progress line. Phase 4's extension installation passes only when that list contains the expected ID and a version for the selected target. Record the evidence in the checkpoint. On failure, inspect the concise error, correct the demonstrated cause, and make at most one targeted installation retry; otherwise mark the phase blocked and continue only independent work.
+
+Reload the editor when requested. Verify the extension is enabled for this profile/workspace and the Google Antigravity panel is available when UI access permits; an installed extension can still be disabled. If UI access is unavailable, installation can pass while activation remains explicitly pending. Have the user complete any required sign-in themselves. Automatic backend installation does not prove a terminal-accessible CLI exists; installation, activation, and sign-in are separate results.
 
 ### Antigravity CLI
 
@@ -206,7 +243,7 @@ Use exactly `REPOSITORY` from the frozen path contract. Do not adapt the four di
 
 With Git available, discover refs with `git ls-remote --symref https://github.com/oracle/fusion-ai-studio.git HEAD`, then clone the selected existing branch/tag into the absent `REPOSITORY` destination using `git clone --branch <ref> --single-branch <url> <destination>`. Record `git rev-parse HEAD` and the commit date. For an existing clone, inspect origin, branch, revision, and worktree status; do not reset, switch, or pull automatically over local modifications.
 
-Without usable Git, use GitHub API repository metadata to resolve the default branch, then resolve the selected ref to a commit SHA. Download `https://github.com/oracle/fusion-ai-studio/archive/<sha>.zip` into `DOWNLOADS`; record repository, ref, SHA, URL, and acquisition date in the final report. If rate limiting prevents this, retry through an official accessible metadata endpoint once or report the blocker; never request a personal access token for this public download.
+Without usable Git, use GitHub API repository metadata to resolve the default branch, then resolve the selected ref to a commit SHA. Download `https://github.com/oracle/fusion-ai-studio/archive/<sha>.zip` into `DOWNLOADS`; record repository, ref, SHA, URL, and acquisition date in the final report. If rate limiting prevents this, follow the bounded retry/reset procedure above and preserve the checkpoint; never request a personal access token for this public download.
 
 Before extracting either a repository ZIP or extension ZIP, list entries and reject absolute paths, `..` traversal, and entries resolving outside the chosen destination. On macOS list with `unzip -Z1` and extract with `ditto`; on Linux inspect with `unzip -Z1` and archive metadata, including links, then extract with `unzip` into a new staging directory under `DOWNLOADS`; on Windows inspect `System.IO.Compression.ZipFile.OpenRead()` entries, dispose the archive, then use `Expand-Archive -LiteralPath ... -DestinationPath ...` into a new directory. Verify the single expected repository root before placing that directory itself at `REPOSITORY`, so a GitHub archive wrapper is not left between `fusion-ai-repo` and its contents. Reject links escaping the archive destination before extraction; if the archive utility cannot validate them, use an available archive library or stop that extraction. Preserve dot-directories and Oracle license files.
 
@@ -235,7 +272,20 @@ node <DOWNLOADS/layout.cjs> copy <SETUP_ROOT> <ORACLE_SOURCE_ROOT>
 - `copy` prechecks both complete trees, then copies missing entries only: contents of `ORACLE_SOURCE_ROOT/.agents/skills` to `WORKSPACE/.agents/skills`, and contents of `ORACLE_SOURCE_ROOT/aiapps` to `WORKSPACE/aiapps`. It includes dot-items, empty subdirectories, and resources; compares file hashes; and rejects divergent or extra destination entries. It never creates an extra containing `skills` or `aiapps` directory. It uses only Node built-ins on all three operating systems.
 - For an existing project containing custom skills or modified samples, do not delete them to satisfy exact-copy checks. Offer a clean root under another parent, or obtain a specific migration decision. The layout/copy gate remains blocked until reconciled. No companion copy scripts or hand-written replacement copy loops should bypass the gate.
 
-Extract the Oracle extension archive into a new child of `EXTENSION_STAGING`, then locate and inspect its VSIX manifest/package identity. Preserve the original archive under the source snapshot (and any separately downloaded original in `DOWNLOADS`). Reuse an existing verified extraction on reruns; do not nest repeated extractions or create suffixed top-level staging folders. Install the VSIX with the verified VS Code launcher and the same `--profile` throughout. Compare the installed ID/version to its manifest; the expected current ID is `oracle.fusion-aistudio-vscode`. Confirm the manifest declares **Fusion AI Studio: Configure Authentication**, or observe it in the UI. Never install that VSIX into standalone Desktop.
+### Required Oracle VS Code extension installation in phase 8
+
+Extract the Oracle extension archive into a new child of `EXTENSION_STAGING`, then locate its VSIX. Inspect its manifest/package for publisher, name, version, and VS Code compatibility. Preserve the original archive under the source snapshot (and any separately downloaded original in `DOWNLOADS`). Reuse a verified extraction on reruns; do not nest repeated extractions or create suffixed top-level staging folders.
+
+Use the exact VS Code target frozen in phase 4. If its installed Oracle ID/version already matches the selected VSIX, reuse it. Otherwise **execute** installation with the absolute VSIX path, wait for completion, and inspect the exit code before listing extensions again:
+
+```text
+code --install-extension <absolute-path-to-extracted-oracle.vsix>
+code --list-extensions --show-versions
+```
+
+Substitute the verified launcher and preserve the same profile/host options. Require the installed ID and version to match the inspected manifest; the expected current ID is `oracle.fusion-aistudio-vscode`. An intentionally retained different version needs verified compatibility and an explicit decision, not an automatic success. Record the VSIX path, expected/observed ID and version, target, and result in the checkpoint. Missing output, a nonzero installation result without a verified subsequent match, or an extension listed in a different profile cannot pass this phase. Diagnose and retry once only after a concrete correction; then mark blocked if unresolved. Do not use `--force` to hide a conflict.
+
+Confirm the package declares **Fusion AI Studio: Configure Authentication**. When the UI is available, reload the selected VS Code window and verify the extension is enabled and that command appears in its Command Palette. Manifest declaration alone proves packaging, not activation; report activation pending when it cannot be observed. Never install the VSIX into standalone Antigravity Desktop. Extraction and the layout helper's VSIX-file check are not proof of VS Code installation.
 
 Now run `verify` from section 7. Do not register a launcher until the copied CLI and workspace pass. Readiness also requires the component checks in section 8; a layout PASS alone is not full installation success.
 
@@ -495,18 +545,20 @@ Perform applicable checks once after the final changes; repeat only failed check
 | Execution target and Desktop | OS/architecture; on Linux distribution, libc, package manager, shell, desktop/remote context; actual Desktop installation or explicit pending/blocked status |
 | Node/npm | Versions and resolved user executable paths |
 | Linux credential storage | `secret-tool` executable visible to Node; same-user Secret Service store/read/delete with a unique non-sensitive test item; no real credentials inspected. Not applicable on Windows/macOS |
-| VS Code and Google extension | Version, profile, installed extension ID/version |
+| VS Code and Google extension | Correct launcher/user/profile/host; exact Google ID/version observed after install or verified reuse; enabled/panel status separate |
 | Antigravity CLI | CLI identity, executable path, successful version/help |
 | Oracle snapshot | Source, branch/ref, commit SHA, compatibility status |
 | Required layout | Helper exit 0, recorded absolute paths, source/copy hashes matched, extracted VSIX, and layout-verification.json |
 | Workspace | Required skills/resources, samples, and scaffold inside fusion-ai-workspace; no project artifacts at setup root |
-| Oracle VS Code extension | Installed manifest identity and declared/discoverable commands |
+| Oracle VS Code extension | VSIX manifest ID/version matched by the installed list in the same target; enabled/Configure Authentication command status separate |
 | Global `aistudio` | Correct launcher resolved outside workspace in refreshed terminals, successful help and exit status |
 | Agent skill discovery | Observed active skills, or explicitly pending UI verification |
 
 Test `aistudio version`, `aistudio --help`, and `aistudio init --help` from two existing directories outside the setup root, including one with spaces when possible. The wrapper must preserve cwd and arguments; being globally callable does not imply every directory is an initialized Oracle project. Project operations still target the current project (or their documented explicit directory argument). On POSIX, inspect the executable bit and the shebang; on Windows check both native shells as described above.
 
 Report each as passed, blocked, declined, or pending verification. Never summarize a partial setup as fully ready. Distinguish **local tooling ready**, **agent integration verified**, **credential storage ready**, and **authentication pending**. On Linux, a missing or unusable Secret Service blocks credential-storage readiness even when all files and CLI help checks pass. Give the actual root, repository, workspace, CLI and launcher paths; versions and snapshot; changes made; and one next action for each remaining blocker.
+
+The final report must include a separate line for **Google Antigravity VS Code extension** and **Oracle Fusion AI Studio VS Code extension**, each with observed ID/version, profile/host, installation status, and activation status. Neither installation may be omitted or replaced by a generic "VS Code ready". Include the last completed phase and checkpoint path if anything remains. Reuse valid phase evidence; do not repeat every successful command solely to produce the final report.
 
 The user must later complete Google sign-in if needed and run **Fusion AI Studio: Configure Authentication** in VS Code using administrator-provided details. Do not request those details in chat. Local readiness is not proof of Fusion access or remote functionality.
 
