@@ -1,28 +1,63 @@
 ---
 name: setup-oracle-ai-agent-studio-antigravity
-description: Prepare or repair a local Windows or macOS Oracle AI Agent Studio CLI environment for users with Google Antigravity Desktop installed, including Node.js, VS Code, Google's Antigravity extension, Antigravity CLI, Oracle skills and samples, and a persistent aistudio command.
+description: Prepare or repair a local Windows, macOS, or Linux Oracle AI Agent Studio CLI environment for users with Google Antigravity Desktop installed, including Node.js, VS Code, Google's Antigravity extension, Antigravity CLI, Oracle skills and samples, and a persistent aistudio command.
 ---
 
 # Oracle AI Agent Studio CLI Setup for Google Antigravity
 
-Prepare a local development environment usable from Google Antigravity Desktop and from Visual Studio Code with Antigravity. Complete the applicable operating-system branch and verify observable results. This skill contains the full setup procedure; no companion scripts are required.
+Prepare a local development environment usable from Google Antigravity Desktop and from Visual Studio Code with Antigravity. Complete the applicable operating-system branch and verify observable results. This skill contains the full setup procedure and an embedded layout helper; no separately distributed scripts are required. During execution, materialize that helper in the setup downloads directory and run it as instructed. Do not merely describe the desired tree.
 
 ## Scope and operating rules
 
 - The user already has Google Antigravity Desktop. Verify its presence; do not replace it with Antigravity IDE, Gemini CLI, or Codex. No Codex installation or Codex project is required.
-- Use the user's local account and local workspace. Detect the OS where commands actually execute, not the OS inferred from a screenshot. Support native Windows and macOS. If the agent runs in WSL, a container, SSH, or a remote host, explain the mismatch and move setup to a local native session before changing the desktop environment. Linux setup is outside scope.
+- Detect the OS where commands actually execute. Support Windows, macOS, and Linux. On Linux, identify distribution, package manager, architecture, libc, shell, and whether this is a desktop, WSL, SSH, or container session. WSL is a Linux target, not native Windows. Keep Linux binaries, paths, and launchers in that Linux environment; do not alter the Windows host from WSL. An explicitly selected remote/headless Linux target may prepare CLI and project files, but Desktop/GUI integration remains pending until checked on the actual desktop host. Never claim a Windows or remote Desktop installation was verified by a Linux shell.
+- Run project creation, copies, extension management, and launcher creation as the intended developer account, not root. Elevate only the package-manager/installer operation that requires it. If the session is root, identify the developer account and switch to its user session before creating user files; do not register a launcher in root's home.
 - Follow the user's language in conversation. This skill, generated launchers, and documentation use English.
 - Begin with read-only discovery. Summarize the missing components and exact proposed installation paths. Proceed within the user's existing authorization; do not repeatedly request permission for the same approved action. Obtain any required host approval for installers, privileges, persistent PATH/profile changes, or writes outside the workspace. Explain the concrete change before a new approval. Do not weaken enterprise policies or disable certificate checks.
 - Download through the terminal from official sources. Download installer scripts to files and inspect them before execution rather than piping unseen network content into a shell. A native installer UI is acceptable. Browser use is appropriate for user-controlled sign-in, not required for downloading software.
 - Preserve existing compatible tools and files. An existing Node installation is not automatically incompatible. Inspect documented runtime requirements and actually run the Oracle help command before recommending changes. A runtime without usable npm is incomplete for this developer setup; first look for `npm.cmd` on Windows and existing developer installations before proposing another Node installation.
-- Inspect existing destinations and command names. Reuse matching files; never overwrite conflicting user content or blindly merge directories. Offer a new destination or obtain a specific replacement decision. Do not delete failed downloads or user files as automatic cleanup.
+- Inspect existing destinations and command names. Reuse matching files; never overwrite conflicting user content or blindly merge directories. Offer a different parent containing the same exact directory names, or obtain a specific migration/replacement decision. Never append suffixes or rename the required directories to resolve a collision. Do not delete failed downloads or user files as automatic cleanup.
 - Never request, display, log, commit, or inspect credentials or `env.properties` contents. Do not run authentication, server fetch, save, publish, or login commands during local setup. Google and Fusion sign-in are performed by the user through their official interfaces.
 - Keep software acquisition, the Oracle source snapshot, and the development workspace distinct. Keep the registered CLI at a stable path; moving or deleting that directory breaks the launcher.
 - Use current official documentation to resolve changed layouts or installers. Never invent package names, release numbers, command flags, extension commands, or an npm package for `aistudio`. If necessary information cannot be verified, report the specific blocker and continue independent checks.
 
 ## 1. Establish context and inspect the environment
 
-Use the active local project directory as the setup root if writable. If no directory is open, ask for one writable local parent folder and guide the user to open it in Antigravity Desktop. Do not perform setup inside this helper skill's installation folder. Default to a new `oracle-ai-agent-studio` child when the open folder contains unrelated material.
+### Resolve and freeze the path contract
+
+The setup root and the development project are different directories. Resolve the absolute root ONCE, before downloading or creating project files:
+
+1. If the user supplies the setup root, require its final component to be exactly `oracle-ai-agent-studio`. Otherwise treat the supplied location as a parent and append that name once; explain the resulting path.
+2. If the open directory is an existing `oracle-ai-agent-studio`, use it after inspection. If it is that root's `fusion-ai-workspace` or a descendant of one of its four managed directories, use the existing root ancestor. Do not create another root inside it.
+3. Otherwise use `<open-directory>/oracle-ai-agent-studio`, regardless of whether the open directory is empty. If no writable local folder is known, ask for a parent folder. Never install into the helper skill's own installation directory.
+4. Resolve existing paths and inspect links/junctions. Select a real writable root and use its canonical absolute path consistently. A conflicting root requires a specific migration decision or a different parent, with the required basename unchanged.
+
+Freeze these absolute values for the entire run; reconstruct them from this table after any shell reset, never from a later current directory:
+
+| Logical value | Required absolute destination |
+| --- | --- |
+| `SETUP_ROOT` | `<chosen-parent>/oracle-ai-agent-studio` |
+| `DOWNLOADS` | `SETUP_ROOT/downloads` |
+| `REPOSITORY` | `SETUP_ROOT/fusion-ai-repo` |
+| `EXTENSION_STAGING` | `SETUP_ROOT/extension-staging` |
+| `WORKSPACE` | `SETUP_ROOT/fusion-ai-workspace` |
+| `CLI` | `WORKSPACE/.agents/skills/aistudio/scripts/aistudio.js` |
+
+Names are literal, including case. The only immediate entries created at `SETUP_ROOT` are the four directories below. Put setup records and helper files in `downloads`, source in `fusion-ai-repo`, VSIX extraction in `extension-staging`, and every development artifact in `fusion-ai-workspace`. `src`, `test`, `AGENTS.md`, `env.properties`, `.agents`, `aiapps`, and project configuration must never be generated directly at `SETUP_ROOT`.
+
+```text
+oracle-ai-agent-studio/
+├── downloads/             # Installers and original archives
+├── fusion-ai-repo/        # Recorded Oracle source snapshot
+├── extension-staging/     # Extracted Oracle VSIX
+└── fusion-ai-workspace/   # User development project
+    ├── .agents/skills/
+    └── aiapps/
+```
+
+This is a required layout, not an example. Additional files generated by Oracle `init` belong **inside** `fusion-ai-workspace`; they are expected and must be preserved. Do not create `skills/skills`, `aiapps/aiapps`, a nested `fusion-ai-workspace`, or a duplicate `oracle-ai-agent-studio`.
+
+After inspecting existing entries, create `SETUP_ROOT`, `DOWNLOADS`, `EXTENSION_STAGING`, and an empty `WORKSPACE` with absolute paths. Leave `REPOSITORY` absent until clone or archive placement. Keep all four directories at completion even when no new installer download was needed. Once Node is usable, run the embedded helper's `preflight` before acquiring the Oracle snapshot. If misplaced artifacts from an earlier run exist, report their exact paths; do not move, delete, or reinitialize them without a specific decision. A conflict blocks layout readiness, not independent tool discovery.
 
 Record OS, architecture, shell, root, detected executable paths and versions. Run independent guarded probes; one missing tool must not prevent the remaining checks. Classify results as installed and usable, installed but not on PATH, missing, incompatible, or not verified. Report a concise component table, not raw command transcripts.
 
@@ -51,6 +86,27 @@ If VS Code is absent from PATH, inspect its actual installation. The common user
 
 Find Antigravity Desktop in the current app context or Windows installed-app metadata, including user installations and packaged applications. Confirm its executable/package and version. Do not equate the VS Code extension with Desktop. If Desktop is missing, report that this skill's starting prerequisite is unmet and provide its official download link; do not silently install a different Google product.
 
+### Linux discovery and package-manager selection
+
+Read `/etc/os-release` as data (`ID`, `ID_LIKE`, `VERSION_ID`), run `uname -m`, inspect libc (glibc versus musl), and identify the actual developer shell and home. Detect WSL via kernel/session metadata and containers/SSH via host context. Inspect only relevant session variables such as `DISPLAY` and `WAYLAND_DISPLAY`; do not dump the environment.
+
+Use `command -v` and `type -a` for Node, npm, Git, code, agy, and aistudio. Locate Desktop using its installed package metadata, desktop-entry `Exec` target, and actual executable/version. A display variable alone does not prove a usable GUI, and the presence of `agy` does not prove Desktop exists. Inspect an existing VS Code launcher before reinstalling.
+
+Choose the system package manager from BOTH the distribution family and available commands. Do not select the first installed manager or treat Homebrew, Snap, or Flatpak as the system manager merely because it exists. Record the choice:
+
+| Family | Manager to verify | Read-only candidate inspection | Authorized install form |
+| --- | --- | --- | --- |
+| Debian / Ubuntu | `apt-get` with `dpkg` | `apt-cache policy <package>` | `sudo apt-get install <packages>` |
+| Fedora / RHEL / Oracle Linux / Rocky / Alma | `dnf`, or `yum` on older hosts | `dnf info <package>` / `yum info <package>` | `sudo dnf install <packages>` / `sudo yum install <packages>` |
+| openSUSE / SLES | `zypper` | `zypper info <package>` | `sudo zypper install <packages>` |
+| Arch / Manjaro | `pacman` | `pacman -Si <package>` | `sudo pacman -S --needed <packages>` |
+| Alpine | `apk` | `apk policy <package>` | `sudo apk add <packages>` |
+| Other / immutable / declarative | Discover the documented native mechanism | Inspect the host's package/configuration model | Use that documented method or the verified user-space fallback below |
+
+The angle-bracket package placeholders must be replaced with names verified in that host's enabled repositories. Check candidate version, origin, architecture, and dependencies; Node/npm names may differ or be versioned. Refresh stale metadata only with the selected manager. On Arch do not use `pacman -Sy` alone; if installation requires a full system upgrade, explain that scope and get a decision before proceeding. For DNF/YUM metadata checks, exit 100 can mean updates are available; inspect command semantics instead of treating every nonzero code as installation failure.
+
+Verify native availability of `curl` (or another existing HTTPS downloader), certificate roots, and the archive tools needed for the chosen downloads. Install only missing prerequisites using verified distribution package names. Do not install another package manager or add an unverified repository. On musl, unsupported CPU architectures, immutable systems, or old libc, verify each vendor's runtime support separately; successful Node installation does not prove VS Code or Antigravity compatibility.
+
 ### Shared checks
 
 - Node and npm versions, architecture, and actual paths; Git only when usable.
@@ -70,12 +126,16 @@ If needed, resolve the newest supported LTS from `https://nodejs.org/dist/index.
 - **Windows:** use an available `winget` with exact package `OpenJS.NodeJS.LTS`, or the official `node-<version>-x64.msi` / `node-<version>-arm64.msi` listed in distribution metadata. Native Windows ARM64 must not be inferred from an x64-emulated shell. Run the MSI through its normal installer and obtain elevation if requested; never claim MSI installation is always per-user.
 - **macOS:** use the official `node-<version>.pkg` when it supports the host architecture and OS, or an already installed developer package manager if preferred. Verify package signature with `pkgutil --check-signature` before installation. Explain system installation/elevation when applicable.
 
+- **Linux:** prefer an already working runtime or a compatible supported LTS candidate from the detected distribution manager; verify npm separately and install its package if it is split. If no compatible candidate exists, use a user-space official Node archive on a supported glibc host: select the actual `node-<version>-linux-<architecture>.tar.xz` (or `.tar.gz`) listed by Node, save it and `SHASUMS256.txt` in `DOWNLOADS`, verify SHA-256, inspect archive paths and link targets, and extract into a new versioned directory under `$HOME/.local/share/oracle-aistudio/runtimes/`. Do not execute tarball content while inspecting. Keep the entire runtime, including npm, and expose its `bin` in the intended user's persistent PATH using section 5. Test its absolute `node` plus `npm --version` with that bin on PATH. Never force a glibc binary onto musl/Alpine; use a compatible distribution build or report the component blocked. A manager-provided non-LTS version needs explicit compatibility evidence, not an assumption.
+
 Recheck both Node and npm through the intended user terminal. Preserve version-manager installations; do not replace their configuration or Antigravity's internal runtime. Do not run `npm install` for the bundled Oracle CLI unless the selected repository explicitly documents additional dependencies.
 
 ### Visual Studio Code
 
 - **Windows:** default to Microsoft's User Installer from `https://update.code.visualstudio.com/latest/win32-x64-user/stable` or `win32-arm64-user/stable`, according to native OS architecture. Save it in the setup downloads folder, verify `Get-AuthenticodeSignature` returns a valid Microsoft publisher signature, then launch it and wait. Select the installer's PATH option when authorized. An existing `winget` may use exact package `Microsoft.VisualStudioCode`; verify scope rather than promising a user installation. Locate `code.cmd` directly after installation.
 - **macOS:** use Microsoft's stable archive endpoint `https://update.code.visualstudio.com/latest/darwin-arm64/stable` or `darwin/stable` for Intel, verifying current availability. Inspect the ZIP and extract into a new staging directory using `ditto -x -k`. Place the app in `$HOME/Applications` when using a user installation, or `/Applications` if authorized and writable. Verify its code signature with `codesign --verify --deep --strict` and normal macOS assessment; never remove quarantine as a workaround. Use its absolute CLI launcher or the documented Command Palette shell-command installation.
+
+- **Linux:** follow [Microsoft's Linux installation guide](https://code.visualstudio.com/docs/setup/linux). Save the official architecture-matched `.deb` or `.rpm` in `DOWNLOADS`. Use the detected manager to install that absolute package path: `sudo apt install /absolute/file.deb`, `sudo dnf install /absolute/file.rpm`, `sudo yum localinstall /absolute/file.rpm`, or `sudo zypper install /absolute/file.rpm`, as appropriate. For managed repositories, verify the Microsoft origin and signing configuration; preserve existing sources. On other supported glibc hosts, use Microsoft's official Linux archive in a stable user application directory, or its official `code` Snap only if Snap is already available and acceptable. Do not silently substitute Code OSS/VSCodium, a community AUR build, or a Flatpak extension host. Check the vendor's current architecture and libc requirements. Never run the editor as root or disable its sandbox to make installation appear successful. Headless installation can verify the CLI and package identity; GUI activation remains pending.
 
 Recheck the VS Code version against Google's current extension requirements. Preserve existing profiles and extension settings.
 
@@ -96,10 +156,10 @@ Use [Google's current installation guide](https://www.antigravity.google/docs/cl
 
 | Platform | Installer | Documented binary location |
 | --- | --- | --- |
-| macOS | `https://antigravity.google/cli/install.sh` | `$HOME/.local/bin/agy` |
+| macOS / Linux | `https://antigravity.google/cli/install.sh` | `$HOME/.local/bin/agy` |
 | Windows | `https://antigravity.google/cli/install.ps1` | `$env:LOCALAPPDATA\agy\bin` |
 
-Download the script to a new file under the setup downloads directory with `curl -fL` on macOS or `Invoke-WebRequest` on Windows. Inspect it for the official download endpoints, architecture handling, PATH changes, and alias removal before executing it. Use the documented `--skip-aliases` option when supported to preserve legacy aliases; diagnose any alias collision separately. Use `--skip-path` only if you will manage and verify PATH explicitly. Do not assume Unix and PowerShell argument syntax are identical: read the downloaded script's parameter declarations.
+Download the script to a new file under the setup downloads directory with `curl -fL` on macOS/Linux or `Invoke-WebRequest` on Windows. Inspect it for the official download endpoints, architecture handling, PATH changes, and alias removal before executing it. Use the documented `--skip-aliases` option when supported to preserve legacy aliases; diagnose any alias collision separately. Use `--skip-path` only if you will manage and verify PATH explicitly. Do not assume Unix and PowerShell argument syntax are identical: read the downloaded script's parameter declarations.
 
 On Windows, inspect effective policy in the exact shell running the installer. If blocked, do not use `-ExecutionPolicy Bypass`. If enterprise policy enforces the block, report it for IT resolution. A user-scope policy change requires explicit authorization and must be narrowly justified for the installer; the `aistudio.cmd` launcher itself needs no PowerShell policy change. If the script's documented installation method is disallowed, pause this component rather than inventing an unsigned binary download URL.
 
@@ -109,46 +169,50 @@ Verify the installed executable directly, then `agy --version` and `agy --help` 
 
 Use only `https://github.com/oracle/fusion-ai-studio`. Inspect remote metadata before assuming a branch or file layout. Prefer the branch corresponding to a Fusion release already stated by the user. If unknown, use the repository's default release branch as a provisional local setup snapshot and clearly state that compatibility with the user's Fusion environment remains unverified. Ask for a product release only when needed to resolve a known mismatch. Do not select the highest-looking branch name without Oracle documentation.
 
-Use this layout under the selected writable setup root; adapt names safely when paths exist and verify that the final structure matches this outline, creating the `fusion-ai-workspace` folder and its content.
-Do not treat the root folder as the fusion AI workspace.
+Use exactly `REPOSITORY` from the frozen path contract. Do not adapt the four directory names or use the setup root as the development workspace. A release-specific subtree inside the clone may be selected as `ORACLE_SOURCE_ROOT`; that changes the source of copies, never their destinations.
+
+With Git available, discover refs with `git ls-remote --symref https://github.com/oracle/fusion-ai-studio.git HEAD`, then clone the selected existing branch/tag into the absent `REPOSITORY` destination using `git clone --branch <ref> --single-branch <url> <destination>`. Record `git rev-parse HEAD` and the commit date. For an existing clone, inspect origin, branch, revision, and worktree status; do not reset, switch, or pull automatically over local modifications.
+
+Without usable Git, use GitHub API repository metadata to resolve the default branch, then resolve the selected ref to a commit SHA. Download `https://github.com/oracle/fusion-ai-studio/archive/<sha>.zip` into `DOWNLOADS`; record repository, ref, SHA, URL, and acquisition date in the final report. If rate limiting prevents this, retry through an official accessible metadata endpoint once or report the blocker; never request a personal access token for this public download.
+
+Before extracting either a repository ZIP or extension ZIP, list entries and reject absolute paths, `..` traversal, and entries resolving outside the chosen destination. On macOS list with `unzip -Z1` and extract with `ditto`; on Linux inspect with `unzip -Z1` and archive metadata, including links, then extract with `unzip` into a new staging directory under `DOWNLOADS`; on Windows inspect `System.IO.Compression.ZipFile.OpenRead()` entries, dispose the archive, then use `Expand-Archive -LiteralPath ... -DestinationPath ...` into a new directory. Verify the single expected repository root before placing that directory itself at `REPOSITORY`, so a GitHub archive wrapper is not left between `fusion-ai-repo` and its contents. Reject links escaping the archive destination before extraction; if the archive utility cannot validate them, use an available archive library or stop that extraction. Preserve dot-directories and Oracle license files.
+
+Inspect the selected repository's README and installation documentation. Resolve `ORACLE_SOURCE_ROOT` as either `REPOSITORY` itself or a documented release subtree within it. It must contain `.agents/skills/aistudio/SKILL.md`, `.agents/skills/aistudio/scripts/aistudio.js`, `aiapps/`, and `extensions/aistudio-extension.zip` (or the documented replacement). Never combine skills from one release and samples from another. Check the base skill's referenced scripts/resources. Do not adopt Codex-specific host requirements when configuring Antigravity.
+
+Write `DOWNLOADS/oracle-source.json` using a JSON serializer, with these fields: `repository` exactly `https://github.com/oracle/fusion-ai-studio`, selected `ref`, resolved 40-character `commit`, ISO-8601 `acquiredAt`, `acquisition` (`git` or `zip`), and `sourceRelativePath` (`.` or the slash-separated subtree relative to `REPOSITORY`). For ZIP acquisition include `archiveUrl` and `archiveSha256`. Record existing-clone modifications and compatibility status in the report; do not claim a dirty clone matches its commit exactly. Reuse a matching record; conflicting records require inspection before replacing them.
+
+## 4. Initialize the exact workspace and copy Oracle assets
+
+The order is mandatory: **lock paths → acquire source → initialize empty workspace → copy contents → extract VSIX → verify layout → register launcher**. This setup request includes creation of the new local scaffold. There is no optional decision to omit `fusion-ai-workspace`, skills, or `aiapps`.
+
+First run the verified Node executable against `ORACLE_SOURCE_ROOT/.agents/skills/aistudio/scripts/aistudio.js` with `version`, `--help`, and `init --help`. Check support for `init --dir`. Run these probes with cwd `WORKSPACE`. Runtime errors are diagnostics, not a reason to replace Node without investigation.
+
+Save the exact JavaScript block in section 7 as `DOWNLOADS/layout.cjs`, using a file-writing tool with literal text. Use the verified Node executable and absolute arguments for every action. Example argument vectors (replace variables with the frozen absolute values; quote paths in the actual shell):
 
 ```text
-oracle-ai-agent-studio/
-├── downloads/             # Installers and original archives
-├── fusion-ai-repo/        # Recorded Oracle source snapshot
-├── extension-staging/     # Extracted Oracle VSIX
-└── fusion-ai-workspace/   # User development project
-    ├── .agents/skills/
-    └── aiapps/
+node <DOWNLOADS/layout.cjs> preflight <SETUP_ROOT>
+node <DOWNLOADS/layout.cjs> init <SETUP_ROOT> <ORACLE_SOURCE_ROOT>
+node <DOWNLOADS/layout.cjs> copy <SETUP_ROOT> <ORACLE_SOURCE_ROOT>
 ```
 
-With Git available, discover refs with `git ls-remote --symref https://github.com/oracle/fusion-ai-studio.git HEAD`, then clone the selected existing branch/tag into a nonexistent destination using `git clone --branch <ref> --single-branch <url> <destination>`. Record `git rev-parse HEAD` and the commit date. For an existing clone, inspect origin, branch, revision, and worktree status; do not reset, switch, or pull automatically over local modifications.
+`preflight` runs as soon as Node is ready; the other actions run after source acquisition. In PowerShell use `& $nodeExe $layoutScript 'init' $setupRoot $oracleSourceRoot`; in POSIX shells use `"$nodeExe" "$layoutScript" init "$setupRoot" "$oracleSourceRoot"`. Do not run examples with literal placeholders. Check each exit code immediately and stop dependent actions after failure.
 
-Without usable Git, use GitHub API repository metadata to resolve the default branch, then resolve the selected ref to a commit SHA. Download `https://github.com/oracle/fusion-ai-studio/archive/<sha>.zip`; record repository, ref, SHA, URL, and acquisition date in the final report. If rate limiting prevents this, retry through an official accessible metadata endpoint once or report the blocker; never request a personal access token for this public download.
+- `init` uses the source CLI, pins cwd and `--dir` to `WORKSPACE`, and refuses a nonempty target. This avoids the circular dependency of trying to invoke a copied CLI before the workspace exists. Do not run bare `aistudio init` at the root or an arbitrary terminal cwd.
+- On a rerun, inspect the existing workspace first. If its scaffold already exists (`src`, `test`, and the selected version's documented configuration filenames), **skip `init`** and preserve it. Never inspect credentials. A partial or conflicting scaffold needs targeted repair based on the CLI's documented behavior; do not force reinitialization or claim readiness. A changed CLI layout requires updating the helper checks to the verified new contract, explicitly reporting the adaptation, while preserving the four-directory contract.
+- `copy` prechecks both complete trees, then copies missing entries only: contents of `ORACLE_SOURCE_ROOT/.agents/skills` to `WORKSPACE/.agents/skills`, and contents of `ORACLE_SOURCE_ROOT/aiapps` to `WORKSPACE/aiapps`. It includes dot-items, empty subdirectories, and resources; compares file hashes; and rejects divergent or extra destination entries. It never creates an extra containing `skills` or `aiapps` directory. It uses only Node built-ins on all three operating systems.
+- For an existing project containing custom skills or modified samples, do not delete them to satisfy exact-copy checks. Offer a clean root under another parent, or obtain a specific migration decision. The layout/copy gate remains blocked until reconciled. No companion copy scripts or hand-written replacement copy loops should bypass the gate.
 
-Before extracting either a repository ZIP or extension ZIP, list entries and reject absolute paths, `..` traversal, and entries resolving outside the chosen destination. On macOS list with `unzip -Z1` and extract with `ditto`; on Windows inspect `System.IO.Compression.ZipFile.OpenRead()` entries, dispose the archive, then use `Expand-Archive -LiteralPath ... -DestinationPath ...` into a new directory. Verify the single expected repository root before placing it at the chosen stable location. Preserve dot-directories and Oracle license files.
+Extract the Oracle extension archive into a new child of `EXTENSION_STAGING`, then locate and inspect its VSIX manifest/package identity. Preserve the original archive under the source snapshot (and any separately downloaded original in `DOWNLOADS`). Reuse an existing verified extraction on reruns; do not nest repeated extractions or create suffixed top-level staging folders. Install the VSIX with the verified VS Code launcher and the same `--profile` throughout. Compare the installed ID/version to its manifest; the expected current ID is `oracle.fusion-aistudio-vscode`. Confirm the manifest declares **Fusion AI Studio: Configure Authentication**, or observe it in the UI. Never install that VSIX into standalone Desktop.
 
-Inspect the selected repository's README and `how-to/` installation documentation. The current expected assets are `.agents/skills/aistudio/SKILL.md`, `.agents/skills/aistudio/scripts/aistudio.js`, `aiapps/`, and `extensions/aistudio-extension.zip`. Discover documented alternatives rather than inventing a legacy layout. Check that the base skill's referenced scripts/resources are present. Do not adopt Codex-specific host requirements from an Oracle guide when configuring Antigravity.
-
-## 4. Prepare the workspace and Oracle extension
-
-Create a new development workspace inside the root folder using the folder name `fusion-ai-workspace`. Copy the complete Oracle `.agents/skills` tree and `aiapps` tree, including hidden items and all referenced resources. Reuse identical files; stop only conflicting copies and continue independent checks. Do not invoke or rewrite Oracle authoring skills as part of setup.
-Ensure that the folder `fusion-ai-workspace` is created inside the root folder `oracle-ai-agent-studio`.
-
-- **macOS:** for an absent/empty destination, `ditto "$source" "$destination"` copies contents, including hidden files. Do not run it against an unchecked nonempty destination.
-- **Windows:** enumerate contents with `Get-ChildItem -LiteralPath $source -Force` and copy each entry with `Copy-Item -LiteralPath $entry.FullName -Destination $destination -Recurse`. This includes dot-items and avoids wildcard treatment of unusual names. Do not use `-Force` to bypass a conflict decision.
-
-Verify recursive relative file lists/counts and the base skill/script paths after copying. Resolve the copied CLI to an absolute path. Run `node <absolute-aistudio.js> version`, `--help`, and `init --help` from the workspace using the verified Node executable. Treat syntax/runtime errors as a concrete compatibility diagnostic, not proof that any existing Node must be replaced.
-
-Inspect and extract the extension ZIP into a new staging directory; locate its VSIX and inspect the VSIX manifest/package identity. Install that file into the selected VS Code profile with `--install-extension <absolute-vsix-path>`. Compare the resulting extension list with the inspected identity; the expected current ID is `oracle.fusion-aistudio-vscode`. Confirm its manifest declares **Fusion AI Studio: Configure Authentication**, or confirm the command appears in VS Code. Report UI activation separately if it could not be inspected. Do not attempt to install VSIX packages into standalone Antigravity Desktop; its Oracle integration uses CLI and skills.
+Now run `verify` from section 7. Do not register a launcher until the copied CLI and workspace pass. Readiness also requires the component checks in section 8; a layout PASS alone is not full installation success.
 
 ## 5. Register a persistent user-level `aistudio` command
 
-This step is required on both platforms. Use the stable copied CLI path in `fusion-ai-workspace/.agents/skills/aistudio/scripts/aistudio.js`, or another user-approved stable Oracle skill installation. Do not point to a temporary extraction. Inspect existing command resolution before creating a launcher. A user-selected compatible existing launcher can be reused after verification.
+This step is required on Windows, macOS, and Linux. Use exactly the frozen `CLI` path inside `fusion-ai-workspace/.agents/skills/aistudio/scripts/aistudio.js`. Do not point to a temporary extraction. Inspect existing command resolution before creating a launcher. Reuse an existing launcher only after verifying it invokes this exact CLI with the verified Node executable. A launcher targeting another project does not satisfy this setup; resolve that conflict before changing it.
 
 Create launchers with normal file-writing tools, not interpolated shell `echo` commands. Substitute actual absolute paths; the examples below are templates, not literal commands to run. Do not place a wrapper beside Node.js, install a fictitious npm package, or change machine-level PATH.
 
-### macOS launcher and PATH
+### macOS and Linux launcher and PATH
 
 Default launcher: `$HOME/.local/bin/aistudio`. Obtain the actual Node executable path; for a version manager, explain that removing the referenced Node version will require refreshing the launcher.
 
@@ -162,7 +226,7 @@ exec '/actual/absolute/path/to/node' '/actual/absolute/path/to/aistudio.js' "$@"
 
 Set only this launcher's executable permission, e.g. `chmod u+x <launcher>`. It must not change directory; `exec` preserves argument boundaries and the CLI exit status.
 
-If its directory is already on the effective persistent PATH, do not edit a profile. Otherwise, inspect the user's interactive shell and startup files, including an existing `ZDOTDIR` for zsh. After authorization, append one uniquely marked block to the actual zsh `.zshrc` or bash interactive startup file; preserve encoding, content, and a backup. Do not duplicate the block on repeat runs. Example for zsh/bash:
+If its directory is already on the effective persistent PATH, do not edit a profile. A temporary export or inherited agent PATH is not proof of persistence. Otherwise, inspect the user's interactive shell and startup files, including an existing `ZDOTDIR` for zsh. After authorization, append one uniquely marked block to the actual zsh `.zshrc` or bash interactive startup file; preserve encoding, content, and a backup. Do not duplicate the block on repeat runs. Example for zsh/bash:
 
 ```sh
 # BEGIN setup-oracle-ai-agent-studio-antigravity PATH
@@ -173,7 +237,9 @@ esac
 # END setup-oracle-ai-agent-studio-antigravity PATH
 ```
 
-For another shell, use its documented user-level PATH mechanism instead of adding POSIX syntax to its configuration. Verify in a fresh instance of the actual interactive shell (e.g. `/bin/zsh -lic 'command -v aistudio; aistudio --help'` with cwd outside the workspace). Also verify the executable directly from a noninteractive process. An alias/function shadowing it remains a blocker until resolved.
+On Linux Bash, cover the actual terminal and login startup paths: `.bashrc` for interactive non-login shells and the first existing login profile (`.bash_profile`, `.bash_login`, then `.profile`). Reuse an existing profile-to-bashrc chain; never create `.bash_profile` just to shadow an existing `.profile`. Add the block only to the necessary files and preserve existing content. Apply the same idempotent approach for a user-space Node runtime bin if one was installed. For fish, use its supported `fish_add_path` mechanism; for other shells, use the documented user PATH mechanism rather than inserting POSIX code. Do not edit `/etc/profile`, `/etc/environment`, or system PATH for this user-level launcher. Linux GUI applications may need restarting or a new login to inherit changes; no global availability claim until their terminal resolves the command.
+
+Verify both a fresh interactive non-login shell and a fresh login shell with an inherited PATH that does not already contain the newly added directory; this distinguishes actual startup-file persistence from the agent's temporary environment. Also check a newly opened terminal in Antigravity or VS Code when available. Verify in a fresh instance of the actual interactive shell (e.g. `/bin/zsh -lic 'command -v aistudio; aistudio --help'` with cwd outside the workspace). Also verify the executable directly from a noninteractive process. An alias/function shadowing it remains a blocker until resolved.
 
 ### Windows launcher and PATH
 
@@ -210,33 +276,201 @@ Record the previous user PATH for rollback without printing unrelated environmen
 
 Verify `Get-Command aistudio -All` and `aistudio --help` from native PowerShell and `where.exe aistudio` / `aistudio --help` from `cmd.exe /d`, with cwd outside the workspace. Check exit codes immediately after each native command. Test with `-NoProfile` in PowerShell as well: the launcher must not depend on a function or policy change. A subprocess with manually appended PATH tests execution, not persistent environment propagation; report persistence only after a refreshed user process resolves it. If an old alias/function wins resolution, obtain a specific decision before altering it.
 
-## 6. Initialize the new project and open it
+## 6. Protect project configuration and open the workspace
 
-A user request to set up a new blank AI Studio project authorizes local scaffolding. Before running `init`, confirm the chosen directory has no existing project artifacts. Installing this helper into a project does not authorize reinitializing that project.
+Initialization has already occurred in section 4. Do not initialize a second time. Check generated directories and configuration filenames without reading `env.properties`. Ensure `WORKSPACE/.gitignore` excludes `env.properties` and credential material before suggesting version control; append missing entries without overwriting existing rules. Any requested `AGENTS.md` also belongs at `WORKSPACE/AGENTS.md`, not `SETUP_ROOT`. Do not initialize Git, commit, or publish unless requested.
 
-Run the verified CLI's `init --help` first. For the currently documented CLI, use `aistudio init --dir <absolute-new-project-path>`. Prefer initializing the new workspace before copying Oracle skills/samples when practical, or verify existing contents consist only of the setup copies. Never run `init` over existing user source, package configuration, or `env.properties`. If the command changes in a later release, follow its actual help. Do not use force options to bypass existing files.
-
-Check generated artifact/test directories and configuration filenames without displaying sensitive file contents. Confirm `.gitignore` excludes `env.properties` and any credential material before suggesting version control; add the exact missing ignore entries without overwriting existing rules. Do not initialize Git, commit, or publish unless requested.
-
-Open/select the development workspace as a local project in Antigravity Desktop using the installed version's UI. Do not invent an `agy` Desktop-opening command. Also open that exact folder in VS Code using its verified launcher. Ask the user to decide workspace trust. Confirm Antigravity discovers the Oracle `aistudio` skill and domain skills through its Customizations/skills interface; use `/skills` in the CLI when supported. If interactive inspection is unavailable, state that file placement passed and discovery still requires user verification.
+Open/select the development workspace as a local project in Antigravity Desktop using the installed version's UI. Do not invent an `agy` Desktop-opening command. Also open that exact absolute `WORKSPACE` folder in VS Code using its verified launcher (not `code .` from an unknown cwd). On headless/remote Linux, verify file placement and CLI behavior there and leave GUI/host integration explicitly pending. Ask the user to decide workspace trust. Confirm Antigravity discovers the Oracle `aistudio` skill and domain skills through its Customizations/skills interface; use `/skills` in the CLI when supported. If interactive inspection is unavailable, state that file placement passed and discovery still requires user verification.
 
 For future projects, explain the repeatable sequence: create a new folder, run `aistudio init --dir <folder>`, copy the complete matching Oracle `.agents/skills` tree there, optionally copy samples, and open the folder in the chosen surface. The global launcher alone does not make project-local skills discoverable in unrelated directories.
 
-## 7. Verify readiness and report
+## 7. Mandatory executable layout gate
+
+Run this helper unchanged for the documented scaffold. It performs actual filesystem checks and returns nonzero on failure; a displayed tree or successful copy command alone is insufficient. Use a supported Node runtime with standard built-in APIs. If a symlink/junction is rejected, review and resolve it to a real approved path; do not silently remove the check. It never reads `env.properties` and refuses to hash that filename in a copy tree.
+
+```javascript
+// Execute with the verified Node executable. No external dependencies.
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const { spawnSync } = require('child_process');
+function fail(message) { throw new Error(message); }
+function stat(p) {
+  try { return fs.lstatSync(p); }
+  catch (e) { if (e.code === 'ENOENT') return null; throw e; }
+}
+function safe(p) {
+  const absolute = path.resolve(p);
+  let current = path.parse(absolute).root;
+  for (const part of absolute.slice(current.length).split(path.sep).filter(Boolean)) {
+    current = path.join(current, part);
+    const s = stat(current);
+    if (s && s.isSymbolicLink()) fail(`Symlink/junction requires review: ${current}`);
+  }
+  return absolute;
+}
+function directory(p, create = false) {
+  safe(p);
+  if (!stat(p) && create) fs.mkdirSync(p, { recursive: true });
+  if (!stat(p)?.isDirectory()) fail(`Missing directory or wrong type: ${p}`);
+}
+function file(p) {
+  safe(p);
+  if (!stat(p)?.isFile()) fail(`Missing regular file: ${p}`);
+}
+function inventory(base) {
+  directory(base);
+  const result = new Map();
+  function walk(dir, prefix) {
+    for (const name of fs.readdirSync(dir).sort()) {
+      const relative = prefix ? `${prefix}/${name}` : name;
+      const full = path.join(dir, name);
+      const s = stat(full);
+      if (s.isSymbolicLink()) fail(`Link requires review: ${full}`);
+      if (s.isDirectory()) { result.set(relative, { type: 'dir' }); walk(full, relative); }
+      else if (s.isFile()) {
+        if (name.toLowerCase() === 'env.properties') fail(`Credential file excluded from inspection: ${full}`);
+        result.set(relative, { type: 'file', hash: crypto.createHash('sha256').update(fs.readFileSync(full)).digest('hex') });
+      } else fail(`Unsupported filesystem entry: ${full}`);
+    }
+  }
+  walk(base, '');
+  return result;
+}
+function compare(source, destination, requireComplete) {
+  const a = inventory(source);
+  const b = stat(destination) ? inventory(destination) : new Map();
+  for (const [name, value] of b) {
+    const wanted = a.get(name);
+    if (!wanted || wanted.type !== value.type || wanted.hash !== value.hash)
+      fail(`Conflicting or extra destination entry; nothing overwritten: ${path.join(destination, name)}`);
+  }
+  if (requireComplete && (a.size !== b.size)) fail(`Incomplete copy: ${destination}`);
+  return a;
+}
+function copyMissing(source, destination, entries) {
+  directory(destination, true);
+  for (const [name, entry] of entries) {
+    const target = path.join(destination, name);
+    if (entry.type === 'dir') directory(target, true);
+    else if (!stat(target)) {
+      fs.copyFileSync(path.join(source, name), target, fs.constants.COPYFILE_EXCL);
+    }
+  }
+}
+function main() {
+  const [mode, rootArg, sourceArg] = process.argv.slice(2);
+  if (!['preflight', 'init', 'copy', 'verify'].includes(mode) || !rootArg || !path.isAbsolute(rootArg))
+    fail('Usage: node layout.cjs <preflight|init|copy|verify> <absolute-setup-root> [absolute-source-root]');
+  const root = safe(rootArg);
+  if (path.basename(root) !== 'oracle-ai-agent-studio') fail('Setup root must be named exactly oracle-ai-agent-studio');
+  for (let parent = path.dirname(root); parent !== path.dirname(parent); parent = path.dirname(parent)) {
+    if (['oracle-ai-agent-studio', 'fusion-ai-workspace', 'fusion-ai-repo'].includes(path.basename(parent)))
+      fail('Nested setup root is not allowed; resolve the existing root first');
+  }
+  const allowed = ['downloads', 'fusion-ai-repo', 'extension-staging', 'fusion-ai-workspace'];
+  if (stat(root)) {
+    directory(root);
+    for (const name of fs.readdirSync(root)) {
+      if (!allowed.includes(name)) fail(`Unexpected root entry; select a clean parent or review migration: ${name}`);
+      directory(path.join(root, name));
+    }
+  }
+  if (mode === 'preflight') {
+    directory(root, true);
+    for (const name of ['downloads', 'extension-staging', 'fusion-ai-workspace']) directory(path.join(root, name), true);
+    // Do not precreate fusion-ai-repo: clone or place the inspected snapshot there.
+    console.log(JSON.stringify({ status: 'PATHS_LOCKED', root, workspace: path.join(root, 'fusion-ai-workspace') }, null, 2));
+    return;
+  }
+  for (const name of allowed) directory(path.join(root, name));
+  const repo = path.join(root, 'fusion-ai-repo');
+  if (!sourceArg || !path.isAbsolute(sourceArg)) fail('An absolute Oracle source root is required');
+  const source = safe(sourceArg);
+  const relative = path.relative(repo, source);
+  if (relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) fail('Source must be inside fusion-ai-repo');
+  const workspace = path.join(root, 'fusion-ai-workspace');
+  for (const name of ['oracle-ai-agent-studio', ...allowed]) {
+    if (stat(path.join(workspace, name))) fail(`Misplaced or nested setup directory: ${path.join(workspace, name)}`);
+  }
+  const skillRelative = path.join('.agents', 'skills', 'aistudio');
+  const scriptRelative = path.join(skillRelative, 'scripts', 'aistudio.js');
+  file(path.join(source, skillRelative, 'SKILL.md'));
+  file(path.join(source, scriptRelative));
+  directory(path.join(source, 'aiapps'));
+  const pairs = [[path.join(source, '.agents', 'skills'), path.join(workspace, '.agents', 'skills')],
+                 [path.join(source, 'aiapps'), path.join(workspace, 'aiapps')]];
+  if (mode === 'init') {
+    if (fs.readdirSync(workspace).length) fail('Init requires an empty workspace; inspect and reuse an existing scaffold without reinitializing it');
+    // The selected CLI must first have been checked for init --dir support.
+    const result = spawnSync(process.execPath, [path.join(source, scriptRelative), 'init', '--dir', workspace],
+      { cwd: workspace, stdio: 'inherit', shell: false });
+    if (result.error || result.status !== 0) fail(`CLI init failed: ${result.error?.message || result.status}`);
+  }
+  if (mode === 'copy') {
+    directory(path.join(workspace, 'src')); directory(path.join(workspace, 'test'));
+    // Precheck BOTH trees before copying anything. Copy contents, never a containing folder.
+    const plans = pairs.map(([s, d]) => compare(s, d, false));
+    pairs.forEach(([s, d], i) => copyMissing(s, d, plans[i]));
+  }
+  directory(path.join(workspace, 'src')); directory(path.join(workspace, 'test'));
+  // Check credential/configuration filenames only; never read env.properties.
+  for (const name of ['package.json', 'env.properties', '.gitignore']) file(path.join(workspace, name));
+  if (mode !== 'init') for (const [s, d] of pairs) compare(s, d, true);
+  if (mode === 'verify') {
+    for (const name of ['.agents', 'aiapps', 'src', 'test']) {
+      if (!fs.readdirSync(workspace).includes(name)) fail(`Required exact directory name missing: ${name}`);
+    }
+    if (!fs.readdirSync(path.join(workspace, '.agents')).includes('skills')) fail('Required exact name missing: .agents/skills');
+    file(path.join(workspace, scriptRelative));
+    file(path.join(workspace, skillRelative, 'SKILL.md'));
+    const vsix = [...inventory(path.join(root, 'extension-staging'))]
+      .filter(([n, e]) => e.type === 'file' && n.toLowerCase().endsWith('.vsix')).map(([n]) => n);
+    if (!vsix.length) fail('No extracted VSIX in extension-staging');
+    const snapshotPath = path.join(root, 'downloads', 'oracle-source.json');
+    file(snapshotPath);
+    const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
+    if (snapshot.repository !== 'https://github.com/oracle/fusion-ai-studio' ||
+        !/^[0-9a-f]{40}$/i.test(snapshot.commit || '') || !snapshot.ref || !snapshot.acquiredAt ||
+        snapshot.sourceRelativePath !== (relative.split(path.sep).join('/') || '.')) fail('Incomplete or mismatched Oracle source record');
+    const output = { layout: 'PASS', root, workspace, source, cli: path.join(workspace, scriptRelative),
+      sourceCommit: snapshot.commit, vsix, checkedAt: new Date().toISOString() };
+    const reportPath = safe(path.join(root, 'downloads', 'layout-verification.json'));
+    if (stat(reportPath)) file(reportPath);
+    fs.writeFileSync(reportPath, JSON.stringify(output, null, 2) + '\n');
+    console.log(JSON.stringify(output, null, 2));
+  } else console.log(`${mode.toUpperCase()} PASS`);
+}
+try { main(); } catch (e) { console.error(`BLOCKED: ${e.message}`); process.exitCode = 1; }
+```
+
+Run after VSIX extraction and again after the last setup change:
+
+```text
+node <DOWNLOADS/layout.cjs> verify <SETUP_ROOT> <ORACLE_SOURCE_ROOT>
+```
+
+A zero exit code writes `DOWNLOADS/layout-verification.json` with actual absolute paths and the checked source commit. Repair missing setup-owned directories or identical missing source entries through the helper, then rerun the failed action. Do not overwrite divergent content. Keep the gate failed if root artifacts are misplaced, a source subtree is wrong, or copies differ. Never convert a failed gate into a success statement. Show the actual filesystem tree, including hidden `.agents`, not a pasted copy of the expected outline; `tree` is optional and must not be installed just for reporting.
+
+## 8. Verify readiness and report
 
 Perform applicable checks once after the final changes; repeat only failed checks or checks affected by a repair. Use harmless `version`, `--help`, and `init --help` commands; never authenticate or contact Fusion to prove local installation.
 
 | Check | Evidence required |
 | --- | --- |
-| Native host and Desktop | OS/architecture and actual Desktop installation |
+| Execution target and Desktop | OS/architecture; on Linux distribution, libc, package manager, shell, desktop/remote context; actual Desktop installation or explicit pending/blocked status |
 | Node/npm | Versions and resolved user executable paths |
 | VS Code and Google extension | Version, profile, installed extension ID/version |
 | Antigravity CLI | CLI identity, executable path, successful version/help |
 | Oracle snapshot | Source, branch/ref, commit SHA, compatibility status |
-| Workspace | Complete copied skills/resources, samples, new scaffold if requested |
+| Required layout | Helper exit 0, recorded absolute paths, source/copy hashes matched, extracted VSIX, and layout-verification.json |
+| Workspace | Required skills/resources, samples, and scaffold inside fusion-ai-workspace; no project artifacts at setup root |
 | Oracle VS Code extension | Installed manifest identity and declared/discoverable commands |
 | Global `aistudio` | Correct launcher resolved outside workspace in refreshed terminals, successful help and exit status |
 | Agent skill discovery | Observed active skills, or explicitly pending UI verification |
+
+Test `aistudio version`, `aistudio --help`, and `aistudio init --help` from two existing directories outside the setup root, including one with spaces when possible. The wrapper must preserve cwd and arguments; being globally callable does not imply every directory is an initialized Oracle project. Project operations still target the current project (or their documented explicit directory argument). On POSIX, inspect the executable bit and the shebang; on Windows check both native shells as described above.
 
 Report each as passed, blocked, declined, or pending verification. Never summarize a partial setup as fully ready. Distinguish **local tooling ready**, **agent integration verified**, and **authentication pending**. Give the actual root, repository, workspace, CLI and launcher paths; versions and snapshot; changes made; and one next action for each remaining blocker.
 
@@ -244,7 +478,7 @@ The user must later complete Google sign-in if needed and run **Fusion AI Studio
 
 ## Official sources
 
-Checked when this skill was authored on October 1, 2026; verify current details at execution time when necessary.
+Updated October 9, 2026; verify current details at execution time when necessary.
 
 - [Google Antigravity getting started and Desktop](https://www.antigravity.google/docs/getting-started/)
 - [Antigravity CLI installation and authentication](https://www.antigravity.google/docs/cli/install/)
@@ -254,5 +488,6 @@ Checked when this skill was authored on October 1, 2026; verify current details 
 - [Oracle Fusion AI Studio repository](https://github.com/oracle/fusion-ai-studio) — read the selected snapshot's README, installation guide, and CLI help.
 - [Oracle CLI overview](https://blogs.oracle.com/fusioncoe/fusion-aistudio-cli)
 - [Node.js official downloads](https://nodejs.org/en/download) and [distribution metadata](https://nodejs.org/dist/index.json)
-- [VS Code on macOS](https://code.visualstudio.com/docs/setup/mac), [Windows](https://code.visualstudio.com/docs/setup/windows), and [CLI](https://code.visualstudio.com/docs/configure/command-line)
+- [VS Code on macOS](https://code.visualstudio.com/docs/setup/mac), [Windows](https://code.visualstudio.com/docs/setup/windows), [Linux](https://code.visualstudio.com/docs/setup/linux), and [CLI](https://code.visualstudio.com/docs/configure/command-line)
 - [PowerShell execution policies](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies)
+- [SUSE Zypper documentation](https://documentation.suse.com/smart/systems-management/html/concept-zypper/concept-zypper.html), [pacman manual](https://man.archlinux.org/man/pacman.8.en), [DNF command reference](https://dnf.readthedocs.io/en/latest/command_ref.html), and [Alpine package management](https://docs.alpinelinux.org/user-handbook/0.1a/Working/apk.html).
