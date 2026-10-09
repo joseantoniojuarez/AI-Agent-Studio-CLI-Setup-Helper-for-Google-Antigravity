@@ -90,7 +90,7 @@ Find Antigravity Desktop in the current app context or Windows installed-app met
 
 Read `/etc/os-release` as data (`ID`, `ID_LIKE`, `VERSION_ID`), run `uname -m`, inspect libc (glibc versus musl), and identify the actual developer shell and home. Detect WSL via kernel/session metadata and containers/SSH via host context. Inspect only relevant session variables such as `DISPLAY` and `WAYLAND_DISPLAY`; do not dump the environment.
 
-Use `command -v` and `type -a` for Node, npm, Git, code, agy, and aistudio. Locate Desktop using its installed package metadata, desktop-entry `Exec` target, and actual executable/version. A display variable alone does not prove a usable GUI, and the presence of `agy` does not prove Desktop exists. Inspect an existing VS Code launcher before reinstalling.
+Use `command -v` and `type -a` for Node, npm, Git, code, agy, aistudio, and `secret-tool`. Check for a user D-Bus session and a Secret Service provider, as described below. Locate Desktop using its installed package metadata, desktop-entry `Exec` target, and actual executable/version. A display variable alone does not prove a usable GUI, and the presence of `agy` does not prove Desktop exists. Inspect an existing VS Code launcher before reinstalling. Kernel text from `uname` is not the distribution identity: containers can report the host's Ubuntu kernel while using a different userland. Select packages from `/etc/os-release` in the actual execution environment.
 
 Choose the system package manager from BOTH the distribution family and available commands. Do not select the first installed manager or treat Homebrew, Snap, or Flatpak as the system manager merely because it exists. Record the choice:
 
@@ -129,6 +129,39 @@ If needed, resolve the newest supported LTS from `https://nodejs.org/dist/index.
 - **Linux:** prefer an already working runtime or a compatible supported LTS candidate from the detected distribution manager; verify npm separately and install its package if it is split. If no compatible candidate exists, use a user-space official Node archive on a supported glibc host: select the actual `node-<version>-linux-<architecture>.tar.xz` (or `.tar.gz`) listed by Node, save it and `SHASUMS256.txt` in `DOWNLOADS`, verify SHA-256, inspect archive paths and link targets, and extract into a new versioned directory under `$HOME/.local/share/oracle-aistudio/runtimes/`. Do not execute tarball content while inspecting. Keep the entire runtime, including npm, and expose its `bin` in the intended user's persistent PATH using section 5. Test its absolute `node` plus `npm --version` with that bin on PATH. Never force a glibc binary onto musl/Alpine; use a compatible distribution build or report the component blocked. A manager-provided non-LTS version needs explicit compatibility evidence, not an assumption.
 
 Recheck both Node and npm through the intended user terminal. Preserve version-manager installations; do not replace their configuration or Antigravity's internal runtime. Do not run `npm install` for the bundled Oracle CLI unless the selected repository explicitly documents additional dependencies.
+
+### Linux credential-storage prerequisite
+
+The Oracle CLI's Linux OS-keychain implementation invokes `secret-tool` by name to store its encryption passphrase. Therefore the executable must resolve on the **CLI process PATH**, and its user's session must provide a working Secret Service over D-Bus. These are separate prerequisites. Successful `aistudio --help` does not exercise either one. Check them during setup even though actual Fusion authentication remains user-controlled.
+
+1. From the intended user's terminal in the same desktop/remote session that will run authentication, check `command -v secret-tool`. Also check that the verified Node process can spawn `secret-tool` (use help only at this stage); a shell alias or function is insufficient. `spawn secret-tool ENOENT` means the process cannot locate/launch that executable, usually because it is missing or absent from that process's PATH. If the file exists but still cannot launch, inspect executable/interpreter/runtime-loader availability before reinstalling.
+2. If missing, install the distribution package that actually supplies `/usr/bin/secret-tool`. On Debian/Ubuntu this is `libsecret-tools`, not just the shared library `libsecret-1-0`. After verifying the candidate, use `sudo apt-get update` if needed, then `sudo apt-get install libsecret-tools`. On Fedora the executable is in `libsecret`; for DNF/YUM systems confirm with `dnf provides '*/secret-tool'` or the available equivalent before installing the provider. For other families query package file metadata using their native tools; do not assume the Debian package name is portable.
+3. Verify a Secret Service implementation in the same user session. Reuse the existing provider. If absent on a Debian/Ubuntu desktop, `gnome-keyring` is a suitable provider after checking package availability; install it separately with `sudo apt-get install gnome-keyring`. Do not replace an existing compatible wallet or start competing providers. A D-Bus daemon alone is not a Secret Service, and `secret-tool` alone is only its client.
+4. After adding a provider, have the user sign out of and back into the **remote desktop session**, then reopen Antigravity/VS Code and its terminal as the same non-root user. The user creates/unlocks the keyring through its normal UI if requested. Do not request the unlock password in chat. A remote-desktop reconnect may resume the same old session rather than start a new one; verify instead of assuming it refreshed D-Bus or unlocked a collection.
+5. Test storage without accessing real credentials: create a random UUID and a unique attribute pair such as `aistudio-setup-probe <uuid>`. Store the fixed non-sensitive value `setup-check` with `secret-tool store --label='AI Studio setup check (temporary)' aistudio-setup-probe <uuid>`, supplying the value through stdin. Look up **only that pair**, compare the returned value in memory, then clear **only that pair** with `secret-tool clear`. Use a bounded process timeout (for example 15 seconds per call); if a lock dialog needs interaction, let the user unlock the keyring and retry. Always attempt narrowly scoped cleanup after a store attempt, and report a pending temporary item if cleanup fails. Do not use Oracle's real `service`/`account` attributes, search existing items, or print stored values. This temporary local check does not authenticate to Fusion and is permitted by this setup procedure.
+
+Classify the exact failure: executable missing/PATH, user session bus unavailable, Secret Service unavailable, provider cryptography failure, collection locked/missing, or successful store/read/delete. Do not infer service health solely from `DBUS_SESSION_BUS_ADDRESS` being set. Keep **Linux credential storage blocked or pending** if the round trip cannot be completed; do not report the environment ready for interactive authentication.
+
+#### KWallet QCA OpenSSL failure
+
+`secret-tool: createDLGroup failed: maybe libqca-ossl is missing` is generated by KWallet's Secret Service implementation when QCA cannot create the cryptographic group for the client session. The client executable is now running; investigate the wallet's QCA OpenSSL plugin rather than reinstalling `libsecret-tools` or Oracle. A missing plugin is a likely cause, but the message alone does not prove it is absent rather than unable to load.
+
+Identify the process owning `org.freedesktop.secrets` with `busctl --user status org.freedesktop.secrets` when available, or equivalent D-Bus owner/PID metadata. `pgrep -a -u "$(id -u)" 'kwalletd|ksecretd'` can locate candidate processes but does not select the active owner when several exist. Inspect that executable's package and Qt dependency; do not infer Qt from the kernel version or from an unrelated installed desktop package.
+
+On Debian/Ubuntu, verify and install only the matching candidate from the configured repositories:
+
+| Active provider build | QCA plugin package | Install after checking its candidate |
+| --- | --- | --- |
+| Qt 5 KWallet, typically `kwalletd5` | `libqca-qt5-2-plugins` | `sudo apt-get install libqca-qt5-2-plugins` |
+| Qt 6 KWallet, typically `kwalletd6` or `ksecretd` | `libqca-qt6-plugins` | `sudo apt-get install libqca-qt6-plugins` |
+
+Use `apt-cache policy <selected-package>` and package dependency/file metadata to confirm the match. On other distributions, resolve the package containing the QCA OpenSSL plugin for the active Qt major version through their manager. Do not install both variants blindly or assume `libqca-ossl` is the package name. If the matching plugin is already installed, verify its files, dependencies, and load errors; do not downgrade OpenSSL or weaken cryptographic policy to suppress the error.
+
+After installation, have the user save their work and fully sign out of and back into the remote desktop session so the wallet restarts and discovers the plugin. Closing and reconnecting the remote viewer may leave the failing process alive. Repeat the uniquely scoped non-sensitive store/read/delete check above before user-controlled Fusion authentication. Preserve the existing wallet and its contents; do not switch providers, reset the wallet, or kill session processes as an automatic repair.
+
+On SSH, WSL, containers, and remote desktops without an initialized user session, install the client where Node actually runs, then diagnose session services there. Do not use `sudo aistudio`, invent a D-Bus address, remove/reset a keyring, use an empty keyring password, or start a one-command `dbus-run-session` and claim persistence for an editor outside that session. Follow the actual desktop/session provider's startup guidance. For an explicitly requested non-interactive deployment, consult the selected Oracle version's documented secret-injection mechanism separately; do not silently replace the keyring with a hard-coded passphrase, shell-profile secret, or plaintext file.
+
+When repairing this error in an existing installation, preserve the scaffold and existing configuration. Fix the executable/session dependency, verify storage, then ask the user to retry the same authentication action from that session. Do not rerun `init` or reinstall the entire toolchain.
 
 ### Visual Studio Code
 
@@ -461,6 +494,7 @@ Perform applicable checks once after the final changes; repeat only failed check
 | --- | --- |
 | Execution target and Desktop | OS/architecture; on Linux distribution, libc, package manager, shell, desktop/remote context; actual Desktop installation or explicit pending/blocked status |
 | Node/npm | Versions and resolved user executable paths |
+| Linux credential storage | `secret-tool` executable visible to Node; same-user Secret Service store/read/delete with a unique non-sensitive test item; no real credentials inspected. Not applicable on Windows/macOS |
 | VS Code and Google extension | Version, profile, installed extension ID/version |
 | Antigravity CLI | CLI identity, executable path, successful version/help |
 | Oracle snapshot | Source, branch/ref, commit SHA, compatibility status |
@@ -472,7 +506,7 @@ Perform applicable checks once after the final changes; repeat only failed check
 
 Test `aistudio version`, `aistudio --help`, and `aistudio init --help` from two existing directories outside the setup root, including one with spaces when possible. The wrapper must preserve cwd and arguments; being globally callable does not imply every directory is an initialized Oracle project. Project operations still target the current project (or their documented explicit directory argument). On POSIX, inspect the executable bit and the shebang; on Windows check both native shells as described above.
 
-Report each as passed, blocked, declined, or pending verification. Never summarize a partial setup as fully ready. Distinguish **local tooling ready**, **agent integration verified**, and **authentication pending**. Give the actual root, repository, workspace, CLI and launcher paths; versions and snapshot; changes made; and one next action for each remaining blocker.
+Report each as passed, blocked, declined, or pending verification. Never summarize a partial setup as fully ready. Distinguish **local tooling ready**, **agent integration verified**, **credential storage ready**, and **authentication pending**. On Linux, a missing or unusable Secret Service blocks credential-storage readiness even when all files and CLI help checks pass. Give the actual root, repository, workspace, CLI and launcher paths; versions and snapshot; changes made; and one next action for each remaining blocker.
 
 The user must later complete Google sign-in if needed and run **Fusion AI Studio: Configure Authentication** in VS Code using administrator-provided details. Do not request those details in chat. Local readiness is not proof of Fusion access or remote functionality.
 
@@ -490,4 +524,5 @@ Updated October 9, 2026; verify current details at execution time when necessary
 - [Node.js official downloads](https://nodejs.org/en/download) and [distribution metadata](https://nodejs.org/dist/index.json)
 - [VS Code on macOS](https://code.visualstudio.com/docs/setup/mac), [Windows](https://code.visualstudio.com/docs/setup/windows), [Linux](https://code.visualstudio.com/docs/setup/linux), and [CLI](https://code.visualstudio.com/docs/configure/command-line)
 - [PowerShell execution policies](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies)
+- [secret-tool manual](https://manpages.debian.org/bookworm/libsecret-tools/secret-tool.1.en.html), [Ubuntu libsecret-tools](https://packages.ubuntu.com/jammy/libsecret-tools), [Fedora libsecret files](https://packages.fedoraproject.org/pkgs/libsecret/libsecret/fedora-44.html), and [GNOME Keyring session integration](https://wiki.gnome.org/Projects/GnomeKeyring).
 - [SUSE Zypper documentation](https://documentation.suse.com/smart/systems-management/html/concept-zypper/concept-zypper.html), [pacman manual](https://man.archlinux.org/man/pacman.8.en), [DNF command reference](https://dnf.readthedocs.io/en/latest/command_ref.html), and [Alpine package management](https://docs.alpinelinux.org/user-handbook/0.1a/Working/apk.html).
