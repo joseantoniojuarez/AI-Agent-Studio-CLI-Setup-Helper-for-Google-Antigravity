@@ -19,6 +19,16 @@ This repository contains exactly two files: this README and the self-contained [
 
 The skill detects the native execution OS and architecture, checks what is already installed, installs only missing or incompatible components, and verifies the result. Existing files and command-name conflicts are inspected before changes. Downloads use official sources through the terminal.
 
+## Step-by-step execution
+
+Setup runs in ten sequential phases: discovery and paths, Node/npm, Linux credential storage, VS Code and the Google extension, Antigravity CLI, Oracle source, workspace creation and copies, Oracle extension, global launcher and project opening, and final checks. The agent announces each phase, reports its result, and continues within the authorization already given. It waits for each installation to finish and does not run parallel installers or repeated background copies.
+
+The agent saves progress in `oracle-ai-agent-studio/downloads/setup-progress.json` before changes and after verification. Compact results, reused evidence, and bounded retries reduce unnecessary model/tool requests. Progress messages provide visibility; they do not remove model rate or token limits. If a quota or repeated rate limit interrupts setup, resume from the checkpoint rather than starting over:
+
+> Continue using SKILL.md and the existing downloads/setup-progress.json under my oracle-ai-agent-studio setup root. Confirm the recorded state and resume the first unfinished phase. Preserve completed work and do not reinitialize the project.
+
+Both VS Code extensions are required. The agent installs and verifies `Google.google-antigravity` and Oracle's VSIX (currently `oracle.fusion-aistudio-vscode`) for the actual user, profile, and extension host. A downloaded VSIX, working CLI, or installed editor alone does not satisfy this requirement. Installation and UI activation are reported separately, and a missing extension prevents a complete-success report.
+
 ## Before you start
 
 You need Google Antigravity Desktop already installed, a local writable project folder, internet access to the official software sources, and permission to install missing software. Some Node.js installers require administrator authorization. Managed-device restrictions may require help from your IT administrator.
@@ -33,7 +43,7 @@ The agent verifies current product and architecture requirements. An existing De
 2. Make this repository's `SKILL.md` available to the agent using the installed Desktop version's file attachment or file reference feature.
 3. Start a chat and use this prompt:
 
-   > Use the attached SKILL.md to prepare my local Oracle AI Agent Studio CLI environment for Google Antigravity Desktop and Visual Studio Code. Check existing tools, install missing prerequisites, register aistudio so it works from any directory, and create the required oracle-ai-agent-studio folder with downloads, fusion-ai-repo, extension-staging, and fusion-ai-workspace. Initialize the project only inside fusion-ai-workspace, copy the complete Oracle skills and aiapps there, and run the embedded layout verification before reporting success. Keep existing files and credentials safe.
+   > Use the attached SKILL.md to set up Oracle AI Agent Studio CLI for Google Antigravity. Work through its ten phases sequentially, show brief progress, and save a checkpoint after each phase. Preserve existing files, create the exact required folder structure, install and verify both the Google Antigravity and Oracle AI Studio extensions in my VS Code profile, and register aistudio on PATH. Verify the result before reporting success; if interrupted, resume from the checkpoint.
 
 4. Review the initial findings and approve any required installation or persistent configuration changes when the host asks.
 5. Follow any instructions to reopen terminals or restart applications. Complete Google sign-in yourself if requested by its official interface.
